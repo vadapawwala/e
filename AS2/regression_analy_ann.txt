@@ -1,0 +1,62 @@
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+url = "/content/sample_data/california_housing_train.csv"
+
+
+data = pd.read_csv(url)
+
+# Display the first few rows of the dataset
+print(data.head())
+
+# Split the data into features (X) and target (y)
+X = data.drop(columns=['median_house_value'])
+y = data['median_house_value']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Normalize the data
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+# Build the ANN model
+model = Sequential([
+    Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(32, activation='relu'),
+    Dense(1)  # Output layer for regression
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
+# Train the model
+history = model.fit(X_train, y_train, epochs=10, batch_size=32, validation_split=0.2)
+# Evaluate the model on the test data
+test_loss, test_mae = model.evaluate(X_test, y_test, verbose=2)
+print(f'\nTest Mean Absolute Error: {test_mae:.2f}')
+# Plot training & validation loss values
+plt.figure(figsize=(12, 4))
+
+plt.subplot(1, 2, 1)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend(loc='upper right')
+
+# Plot training & validation MAE values
+plt.subplot(1, 2, 2)
+plt.plot(history.history['mae'], label='Train MAE')
+plt.plot(history.history['val_mae'], label='Validation MAE')
+plt.title('Model MAE')
+plt.xlabel('Epoch')
+plt.ylabel('MAE')
+plt.legend(loc='upper right')
+
+plt.show()
