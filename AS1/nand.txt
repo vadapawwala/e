@@ -1,0 +1,33 @@
+#NAND gate perceptron
+import numpy as np
+
+def step_function(x):
+    return np.where(x >= 0, 1, 0)
+
+def perceptron_learning_rule(X, y, learning_rate=0.1, epochs=5):
+    weights = np.zeros(X.shape[1])
+    bias = 0
+
+    for epoch in range(epochs):
+        for i in range(len(X)):
+            linear_output = np.dot(X[i], weights) + bias
+            y_pred = step_function(linear_output)
+            error = y[i] - y_pred
+            weights += learning_rate * error * X[i]
+            bias += learning_rate * error
+            print(f"Epoch {epoch+1}, Input {X[i]}, Weights {weights}, Bias {bias}, Output {y_pred}")
+
+    return weights, bias
+
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([1, 1, 1, 0])
+weights, bias = perceptron_learning_rule(X, y, learning_rate=0.1, epochs=5)
+
+def predict(X, weights, bias):
+    linear_output = np.dot(X, weights) + bias
+    return step_function(linear_output)
+
+
+print("\nTesting NAND gate perceptron:")
+for i in range(len(X)):
+    print(f"Input: {X[i]}, Predicted Output: {predict(X[i], weights, bias)}, Expected Output: {y[i]}")
