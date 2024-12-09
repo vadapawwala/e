@@ -1,0 +1,52 @@
+#A3 SET -A Q2
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.datasets import cifar10
+
+# 1. Load the CIFAR-10 dataset
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+
+# Normalize the pixel values to be between 0 and 1
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# Ensure y_train and y_test are 1D arrays
+y_train = y_train.flatten()
+y_test = y_test.flatten()
+
+# 2. Create the Convolutional Base of the Model
+model = models.Sequential()
+
+# First Convolutional Layer
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+
+# Second Convolutional Layer
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+
+# Third Convolutional Layer
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+
+# Flatten the output and add Dense layers
+model.add(layers.Flatten())
+model.add(layers.Dense(128, activation='relu'))  # Additional Dense Layer
+model.add(layers.Dense(64, activation='relu'))   # Original Dense Layer
+
+# Output layer (10 classes for CIFAR-10 dataset)
+model.add(layers.Dense(10, activation='softmax'))
+
+# 3. Display the model summary
+model.summary()
+
+# 4. Compile the model
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# 5. Train the Model
+model.fit(x_train, y_train, epochs=10, batch_size=64, validation_data=(x_test, y_test))
+
+# 6. Evaluate the Model on Test Data
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"\nTest accuracy: {test_acc}")

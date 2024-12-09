@@ -1,0 +1,95 @@
+#A3 SET- B Q1
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.datasets import fashion_mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, LeakyReLU
+from tensorflow.keras.utils import to_categorical
+
+
+(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+
+
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+
+x_train = np.expand_dims(x_train, axis=-1)
+x_test = np.expand_dims(x_test, axis=-1)
+
+
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+
+def build_model():
+    model = Sequential([
+
+        Conv2D(32, (3, 3), padding='same', input_shape=(28, 28, 1)),
+        LeakyReLU(alpha=0.1),
+        MaxPooling2D((2, 2)),
+
+
+        Conv2D(64, (3, 3), padding='same'),
+        LeakyReLU(alpha=0.1),
+        MaxPooling2D((2, 2)),
+
+
+        Conv2D(128, (3, 3), padding='same'),
+        LeakyReLU(alpha=0.1),
+        MaxPooling2D((2, 2)),
+
+
+        Flatten(),
+
+
+        Dense(128),
+        LeakyReLU(alpha=0.1),
+
+
+        Dense(10, activation='softmax')
+    ])
+    return model
+
+
+model = build_model()
+model.summary()
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+
+history = model.fit(x_train, y_train,
+                    epochs=5,
+                    batch_size=64,
+                    validation_split=0.2,
+                    verbose=1)
+
+
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
+print(f"Test accuracy: {test_acc}")
+print(f"Test loss: {test_loss}")
+
+
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Training and Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
