@@ -1,0 +1,64 @@
+import numpy as np
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+
+inputs = np.array([[0, 0],
+                   [0, 1],
+                   [1, 0],
+                   [1, 1]])
+
+
+outputs = np.array([[0],
+                    [1],
+                    [1],
+                    [0]])
+
+
+inputLayerNeurons = inputs.shape[1]
+hiddenLayerNeurons = 2
+outputLayerNeurons = 1
+
+# Weight and bias initialization
+hidden_weights = np.random.uniform(size=(inputLayerNeurons, hiddenLayerNeurons))
+hidden_bias = np.random.uniform(size=(1, hiddenLayerNeurons))
+output_weights = np.random.uniform(size=(hiddenLayerNeurons, outputLayerNeurons))
+output_bias = np.random.uniform(size=(1, outputLayerNeurons))
+
+
+learning_rate = 1
+
+
+for _ in range(10000):
+    # Forward Propagation
+    hidden_layer_activation = np.dot(inputs, hidden_weights)
+    hidden_layer_activation += hidden_bias
+    hidden_layer_output = sigmoid(hidden_layer_activation)
+
+    output_layer_activation = np.dot(hidden_layer_output, output_weights)
+    output_layer_activation += output_bias
+    predicted_output = sigmoid(output_layer_activation)
+
+    # Backpropagation
+    error = outputs - predicted_output
+    d_predicted_output = error * sigmoid_derivative(predicted_output)
+
+    error_hidden_layer = d_predicted_output.dot(output_weights.T)
+    d_hidden_layer = error_hidden_layer * sigmoid_derivative(hidden_layer_output)
+
+    # Updating Weights and Biases
+    output_weights += hidden_layer_output.T.dot(d_predicted_output) * learning_rate
+    output_bias += np.sum(d_predicted_output, axis=0, keepdims=True) * learning_rate
+    hidden_weights += inputs.T.dot(d_hidden_layer) * learning_rate
+    hidden_bias += np.sum(d_hidden_layer, axis=0, keepdims=True) * learning_rate
+
+# Testing the trained MLP
+print("Input: \n" + str(inputs))
+print("Expected Output: \n" + str(outputs))
+print("Predicted Output: \n" + str(predicted_output))
