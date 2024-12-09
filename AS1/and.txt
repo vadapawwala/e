@@ -1,0 +1,51 @@
+import numpy as np
+
+#And
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([0, 0, 0, 1])
+
+weights = np.array([1.2, 0.6])
+learning_rate = 0.5
+threshold = 1
+
+def step_function(x):
+    return 1 if x >= threshold else 0
+
+def perceptron_predict(inputs):
+    return step_function(np.dot(inputs, weights))
+
+def train_perceptron(X, y, weights, learning_rate, threshold, max_epochs=10):
+    for epoch in range(max_epochs):
+        print(f"Epoch {epoch + 1}")
+        total_error = 0
+        for i in range(len(X)):
+            inputs = X[i]
+            target = y[i]
+            prediction = perceptron_predict(inputs)
+
+            # Update rule
+            error = target - prediction
+            total_error += abs(error)
+            weights += learning_rate * error * inputs
+
+            print(f"Input: {inputs}, Target: {target}, Prediction: {prediction}")
+            print(f"Updated Weights: {weights}\n")
+
+        # If there are no errors, stop training
+        if total_error == 0:
+            print("No errors, stopping training.")
+            break
+
+    return weights
+
+# Train the perceptron
+weights = train_perceptron(X, y, weights, learning_rate, threshold)
+
+# Test the perceptron
+print("Final Weights:", weights)
+
+# Testing all inputs
+print("\nTesting all inputs:")
+for inputs in X:
+    output = perceptron_predict(inputs)
+    print(f"Input: {inputs} => Output: {output}")
