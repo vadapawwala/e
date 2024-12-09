@@ -1,0 +1,70 @@
+import torch
+import torch.nn as nn
+import torch.utils.data as data
+import torchvision.datasets as datasets
+import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
+
+# Load MNIST dataset
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+train_dataset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
+test_dataset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=False, transform=transform)
+
+# Data loader
+train_loader = data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+# RBM model
+class RBM(nn.Module):
+    def __init__(self, visible_units, hidden_units):
+        super(RBM, self).__init__()
+        self.visible_units = visible_units#no of i/p unit
+        self.hidden_units = hidden_units
+        self.W = nn.Parameter(torch.randn(visible_units, hidden_units))# weight matrix
+        self.a = nn.Parameter(torch.randn(visible_units))#bias for visible unit
+        self.b = nn.Parameter(torch.randn(hidden_units))
+
+    def forward(self, x):
+        h = torch.sigmoid(torch.matmul(x, self.W) + self.b)
+        return h
+
+    def sample_h_given_v(self, v):
+        h = torch.sigmoid(torch.matmul(v, self.W) + self.b)#samples hidden layer using sig
+        return h
+
+    def sample_v_given_h(self, h):
+        v = torch.sigmoid(torch.matmul(h, self.W.t()) + self.a) #samples visible layer using sig
+        return v
+
+# Train RBM
+rbm = RBM(visible_units=784, hidden_units=256)
+criterion = nn.MSELoss()
+optimizer = torch.optim.SGD(rbm.parameters(), lr=0.01)
+
+for epoch in range(10):
+    for data, labels in train_loader:
+        data = data.view(-1, 784)
+        h = rbm.sample_h_given_v(data)
+        x_recon = rbm.sample_v_given_h(h)
+        loss = criterion(x_recon, data)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    print(f'Epoch {epoch+1}, Loss: {loss.item()}')
+
+# Generate images
+with torch.no_grad():
+    generated_images = []
+    for i in range(10):
+        h = torch.randn(1, 256)
+        generated_image = rbm.sample_v_given_h(h)
+        generated_images.append(generated_image)
+
+# Visualize real and generated images
+fig, ax = plt.subplots(2, 10, figsize=(20, 4))
+for i in range(10):
+    ax[0, i].imshow(train_dataset[i][0].reshape(28, 28), cmap='gray')
+    ax[0, i].set_title('Real Image')
+    ax[1, i].imshow(generated_images[i].reshape(28, 28), cmap='gray')
+    ax[1, i].set_title('Generated Image')
+plt.show()

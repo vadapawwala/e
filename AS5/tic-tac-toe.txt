@@ -1,0 +1,119 @@
+import numpy as np
+import random
+
+class TicTacToe:
+    def __init__(self):
+        self.board = np.zeros((3, 3))  # 0 for empty, 1 for X, -1 for O
+        self.current_player = 1
+
+    def reset(self):
+        self.board.fill(0)
+        self.current_player = 1
+        return self.board.flatten()
+
+    def available_actions(self):
+        return list(zip(*np.where(self.board == 0)))
+
+    def make_move(self, action):
+        self.board[action] = self.current_player
+        reward, done = self.check_winner()
+        self.current_player *= -1  # Switch player
+        return self.board.flatten(), reward, done
+
+    def check_winner(self):
+        for player in [1, -1]:
+            if any(np.all(self.board[i, :] == player) for i in range(3)) or \
+               any(np.all(self.board[:, i] == player) for i in range(3)) or \
+               np.all(np.diag(self.board) == player) or \
+               np.all(np.diag(np.fliplr(self.board)) == player):
+                return (1 if player == 1 else -1), True
+        if len(self.available_actions()) == 0:
+            return 0, True  # Draw
+        return 0, False  # Game not finished
+
+    def render(self):
+        print("\nCurrent Board:")
+        symbols = {1: 'X', -1: 'O', 0: ' '}
+        for row in self.board:
+            print("|".join(symbols[int(cell)] for cell in row))
+            print("-" * 5)
+
+class QLearningAgent:
+    def __init__(self, learning_rate=0.1, discount_factor=0.9, exploration_prob=1.0, exploration_decay=0.99):
+        self.q_table = {}
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.exploration_prob = exploration_prob
+        self.exploration_decay = exploration_decay
+
+    def get_q_value(self, state, action):
+        return self.q_table.get((tuple(state), action), 0.0)
+
+    def update_q_value(self, state, action, reward, next_state):
+        available_actions = [(x, y) for (x, y) in zip(*np.where(next_state[:9].reshape(3, 3) == 0))]
+        best_next_q = max(self.get_q_value(next_state, a) for a in available_actions) if available_actions else 0
+        current_q = self.get_q_value(state, action)
+        new_q = current_q + self.learning_rate * (reward + self.discount_factor * best_next_q - current_q)
+        self.q_table[(tuple(state), action)] = new_q
+
+    def choose_action(self, state, available_actions):
+        if random.uniform(0, 1) < self.exploration_prob:
+            return random.choice(available_actions)  # Explore
+        else:
+            q_values = [self.get_q_value(state, action) for action in available_actions]
+            max_q = max(q_values)
+            best_actions = [action for action, q in zip(available_actions, q_values) if q == max_q]
+            return random.choice(best_actions)  # Exploit
+
+    def decay_exploration(self):
+        self.exploration_prob *= self.exploration_decay
+
+def train_agent(episodes=10000):
+    env = TicTacToe()
+    agent = QLearningAgent()
+
+    for episode in range(episodes):
+        state = env.reset()
+        done = False
+
+        while not done:
+            available_actions = env.available_actions()
+            action = agent.choose_action(state, available_actions)
+            next_state, reward, done = env.make_move(action)
+            agent.update_q_value(state, action, reward, next_state)
+            state = next_state
+
+    return agent
+
+def play_game(agent1, agent2):
+    env = TicTacToe()
+    state = env.reset()
+    done = False
+
+    while not done:
+        env.render()
+        available_actions = env.available_actions()
+
+        if env.current_player == 1:  # Agent 1's turn (X)
+            action = agent1.choose_action(state, available_actions)
+        else:  # Agent 2's turn (O)
+            action = agent2.choose_action(state, available_actions)
+
+        next_state, reward, done = env.make_move(action)
+        state = next_state
+
+    env.render()
+    if reward == 1:
+        print("X wins!")
+    elif reward == -1:
+        print("O wins!")
+    else:
+        print("It's a draw!")
+
+if __name__ == "__main__":
+    print("Training agent...")
+    trained_agent = train_agent(episodes=10000)
+    print("Training complete!")
+
+    print("\nPlaying a game between two agents:")
+    play_game(trained_agent, trained_agent)

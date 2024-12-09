@@ -1,0 +1,103 @@
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load and preprocess the MNIST dataset
+(train_images, _), (_, _) = keras.datasets.mnist.load_data()
+train_images = train_images.astype("float32") / 255.0
+train_images = np.expand_dims(train_images, axis=-1)
+
+# Constants
+BUFFER_SIZE = 60000
+BATCH_SIZE = 256
+NOISE_DIM = 100
+EPOCHS = 50  # Number of epochs
+
+# Create a dataset
+train_dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+
+# Build the Generator
+def build_generator():
+    model = keras.Sequential()
+    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(NOISE_DIM,)))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+    model.add(layers.Reshape((7, 7, 256)))
+    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+    model.add(layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+    model.add(layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', activation='sigmoid'))
+    return model
+
+# Build the Discriminator
+def build_discriminator():
+    model = keras.Sequential()
+    model.add(layers.Input(shape=[28, 28, 1]))  # Use Input layer here
+    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.3))
+    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.3))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(1))
+    return model
+
+# Instantiate the models
+generator = build_generator()
+discriminator = build_discriminator()
+
+# Loss function and optimizers
+cross_entropy = keras.losses.BinaryCrossentropy(from_logits=True)
+generator_optimizer = keras.optimizers.Adam(1e-4)
+discriminator_optimizer = keras.optimizers.Adam(1e-4)
+
+# Training function
+@tf.function
+def train_step(images):
+    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM])
+
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+        generated_images = generator(noise, training=True)
+
+        real_output = discriminator(images, training=True)
+        fake_output = discriminator(generated_images, training=True)
+
+        gen_loss = cross_entropy(tf.ones_like(fake_output), fake_output)
+        disc_loss = (cross_entropy(tf.ones_like(real_output), real_output) +
+                     cross_entropy(tf.zeros_like(fake_output), fake_output))
+
+    gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
+    gradients_of_discriminator = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+    generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
+    discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
+
+# Training loop
+def train_gan(epochs):
+    for epoch in range(epochs):
+        for image_batch in train_dataset:
+            train_step(image_batch)
+
+        # Generate and save images at the end of each epoch
+        generate_and_save_images(generator, epoch + 1)
+
+# Generate and Save Images
+def generate_and_save_images(model, epoch):
+    noise = tf.random.normal([1, NOISE_DIM])  # Generate one image
+    generated_image = model(noise, training=False)
+
+    plt.figure(figsize=(2, 2))
+    plt.imshow(generated_image[0, :, :, 0], cmap='gray')
+    plt.axis('off')
+    plt.title(f'Epoch {epoch}')  # Title to indicate the epoch number
+    plt.show()  # Display the image
+    plt.savefig(f'gan_epoch_{epoch}.png')  # Save the image
+
+# Start training
+train_gan(EPOCHS)

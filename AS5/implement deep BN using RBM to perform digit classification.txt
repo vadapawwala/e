@@ -1,0 +1,103 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+import torchvision.datasets as datasets
+import torchvision.transforms as transforms
+
+
+# Define RBM class
+class RBM(nn.Module):
+    def __init__(self, visible_units, hidden_units):
+        super(RBM, self).__init__()
+        self.visible_units = visible_units
+        self.hidden_units = hidden_units
+        self.W = nn.Parameter(torch.randn(visible_units, hidden_units))
+        self.a = nn.Parameter(torch.randn(visible_units))
+        self.b = nn.Parameter(torch.randn(hidden_units))
+
+    def sample_h_given_v(self, v):
+        h_prob = torch.sigmoid(torch.matmul(v, self.W) + self.b)
+        h_sample = torch.bernoulli(h_prob)
+        return h_prob, h_sample
+
+    def sample_v_given_h(self, h):
+        v_prob = torch.sigmoid(torch.matmul(h, self.W.t()) + self.a)
+        v_sample = torch.bernoulli(v_prob)
+        return v_prob, v_sample
+
+
+# Define DBN class
+class DBN(nn.Module):
+    def __init__(self, rbm_layers):
+        super(DBN, self).__init__()
+        self.rbm_layers = nn.ModuleList(rbm_layers)
+        self.dropout = nn.Dropout(p=0.2)
+        self.fc = nn.Linear(64 * 784, 10)
+        self.fc = nn.Linear(64, 10)
+
+    def forward(self, x):
+        for rbm in self.rbm_layers:
+            _, x = rbm.sample_h_given_v(x)
+            x = self.dropout(x)
+        x = x.view(-1, 64)  # Reshape to match self.fc input shape
+        x = self.fc(x)
+        return x
+
+
+# Load MNIST dataset
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+train_dataset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
+test_dataset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=False, transform=transform)
+
+# Data loader
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+
+# Define RBM layers
+rbm_layers = [
+    RBM(784, 256),
+    RBM(256, 128),
+    RBM(128, 64)
+]
+
+
+# Initialize DBN
+dbn = DBN(rbm_layers)
+
+
+# Train DBN
+criterion = nn.MSELoss()
+optimizer = optim.SGD(dbn.parameters(), lr=0.01)
+
+
+for epoch in range(10):
+    for x, _ in train_loader:
+        x = x.view(-1, 784)
+        h_prob, h_sample = dbn.rbm_layers[0].sample_h_given_v(x)
+        v_prob, v_sample = dbn.rbm_layers[0].sample_v_given_h(h_sample)
+        loss = criterion(v_prob, x)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    print(f'Epoch {epoch+1}, Loss: {loss.item()}')
+
+
+# Test DBN
+test_loss = 0
+correct = 0
+with torch.no_grad():
+    for x, y in test_loader:
+        x = x.view(-1, 784)
+        y = y.view(-1)
+        h = dbn(x)
+        logits = h[:, :10]
+        output = torch.argmax(logits, dim=1)
+        test_loss += criterion(logits, torch.nn.functional.one_hot(y, num_classes=10)).item()
+        correct += (output == y).sum().item()
+
+
+accuracy = correct / len(test_dataset)
+print(f'Test Loss: {test_loss / len(test_loader)}')
+print(f'DBN Classification Score: {accuracy:.2f}')
