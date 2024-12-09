@@ -1,0 +1,128 @@
+#A 4 SET B Q2 (USING RNN)
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense, Flatten
+from tensorflow.keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
+# Load and preprocess data
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = x_train / 255.0
+x_test = x_test / 255.0
+x_train = np.expand_dims(x_train, axis=-1)  # Add channel dimension
+x_test = np.expand_dims(x_test, axis=-1)  # Add channel dimension
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+# Build Simple RNN model
+model = Sequential([
+    SimpleRNN(64, input_shape=(28, 28), return_sequences=False),
+    Dense(10, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(x_train, y_train, epochs=5, batch_size=64, validation_split=0.2)
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"Test accuracy: {test_acc:.4f}")
+
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()
+
+#A 4 SET B Q2 (USING LSTM)
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Flatten
+from tensorflow.keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
+# Load and preprocess data
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = x_train / 255.0
+x_test = x_test / 255.0
+x_train = np.expand_dims(x_train, axis=-1)  # Add channel dimension
+x_test = np.expand_dims(x_test, axis=-1)  # Add channel dimension
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+# Build LSTM model
+model = Sequential([
+    LSTM(64, input_shape=(28, 28), return_sequences=False),
+    Dense(10, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(x_train, y_train, epochs=5, batch_size=64, validation_split=0.2)
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"Test accuracy: {test_acc:.4f}")
+
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()
+
+#A 4 SET B Q2 (USING GRU)
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import GRU, Dense, Flatten
+from tensorflow.keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
+# Load and preprocess data
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = x_train / 255.0
+x_test = x_test / 255.0
+x_train = np.expand_dims(x_train, axis=-1)  # Add channel dimension
+x_test = np.expand_dims(x_test, axis=-1)  # Add channel dimension
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+# Build GRU model
+model = Sequential([
+    GRU(64, input_shape=(28, 28), return_sequences=False),
+    Dense(10, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(x_train, y_train, epochs=5, batch_size=64, validation_split=0.2)
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"Test accuracy: {test_acc:.4f}")
+
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()

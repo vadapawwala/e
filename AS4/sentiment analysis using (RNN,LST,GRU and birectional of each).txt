@@ -1,0 +1,115 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, GRU, SimpleRNN, Bidirectional, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+
+# 1. Load and Preprocess Data
+max_words = 10000  # Consider the top 10,000 words
+max_len = 200      # Maximum length of each sequence
+
+# Load the IMDB dataset (already split into training and test sets)
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_words)
+
+# Pad sequences to ensure uniform length
+x_train = pad_sequences(x_train, maxlen=max_len, padding='post')
+x_test = pad_sequences(x_test, maxlen=max_len, padding='post')
+
+# 2. Build and Compile Models
+def build_and_compile_model(recurrent_type='bi_lstm', embedding_dim=64, units=64):
+    model = Sequential()
+    model.add(Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len))
+
+    if recurrent_type == 'bi_lstm':
+        model.add(Bidirectional(LSTM(units, return_sequences=False)))
+    elif recurrent_type == 'bi_gru':
+        model.add(Bidirectional(GRU(units, return_sequences=False)))
+    elif recurrent_type == 'bi_rnn':
+        model.add(Bidirectional(SimpleRNN(units, return_sequences=False)))
+    elif recurrent_type == 'simple_rnn':
+        model.add(SimpleRNN(units, return_sequences=False))
+    else:
+        raise ValueError("Unsupported recurrent layer type. Choose from 'bi_lstm', 'bi_gru', 'bi_rnn', 'simple_rnn'")
+
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))  # Binary classification output
+
+    model.compile(loss='binary_crossentropy', optimizer=Adam(learning_rate=0.0001), metrics=['accuracy'])
+
+    return model
+
+# 3. Train and Evaluate Models
+def train_and_evaluate_model(model, x_train, y_train, x_test, y_test, epochs=5):
+    history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=epochs, batch_size=64, verbose=0)
+    return history
+
+def plot_metrics(history, model_name):
+    # Accuracy
+    plt.figure(figsize=(12, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['accuracy'], label='Train Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Test Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title(f'{model_name} Accuracy')
+    plt.legend()
+
+    # Loss
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Test Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title(f'{model_name} Loss')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+# List of model types to evaluate
+model_types = ['bi_lstm', 'bi_gru', 'bi_rnn', 'simple_rnn']
+
+for model_type in model_types:
+    print(f"Training {model_type} model...")
+    model = build_and_compile_model(recurrent_type=model_type)
+    history = train_and_evaluate_model(model, x_train, y_train, x_test, y_test, epochs=5)
+    plot_metrics(history, model_type)
+    print(f"Evaluation for {model_type} model:")
+    eval_results = model.evaluate(x_test, y_test, verbose=0)
+    print(f"Loss: {eval_results[0]:.4f}, Accuracy: {eval_results[1]:.4f}\n")
+
+# 4. Predict the Sentiment of a New Sentence
+def predict_sentiment(model, sentence, max_len):
+    # Load the word index
+    word_index = imdb.get_word_index()
+    # Add offsets to match Keras' word index
+    word_index = {k:(v+3) for k,v in word_index.items()}
+    word_index["<PAD>"] = 0
+    word_index["<START>"] = 1
+    word_index["<UNK>"] = 2
+    word_index["<UNUSED>"] = 3
+
+    # Tokenize the input sentence
+    words = sentence.lower().split()
+    sequence = [word_index.get(word, word_index["<UNK>"]) for word in words]
+
+    # Pad the sequence
+    padded_sequence = pad_sequences([sequence], maxlen=max_len, padding='post')
+
+    # Predict sentiment
+    prediction = model.predict(padded_sequence)
+    probability = prediction[0][0]
+    print(f"Prediction probability: {probability:.4f}")
+
+    if probability >= 0.5:
+        return "positive"
+    else:
+        return "negative"
+
+# Example Predictions with the last trained model (can be replaced with any model of interest)
+for sentence in sentences:
+    sentiment = predict_sentiment(model, sentence, max_len)
+    print(f"Predicted sentiment for '{sentence}' is: {sentiment}\n")

@@ -1,0 +1,52 @@
+# Import necessary libraries
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+from tensorflow.keras.utils import to_categorical
+import numpy as np
+from sklearn.metrics import accuracy_score
+
+# Define model parameters
+vocab_size = 1000  # Maximum number of unique integers
+embedding_dim = 64  # Dimension of embedding vector
+max_length = 10  # Maximum length of sequence
+lstm_units = 64  # Number of LSTM units
+num_classes = 2  # Number of output classes (binary classification)
+
+# Define the model
+model = Sequential([
+    Embedding(vocab_size, embedding_dim, input_length=max_length),
+    LSTM(lstm_units, return_sequences=True),
+    LSTM(lstm_units),
+    Dense(num_classes, activation='softmax')  # Softmax for multi-class classification
+])
+
+# Compile the model with categorical crossentropy for classification
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Print model summary
+print(model.summary())
+
+# Example usage:
+# Generate dummy data
+x_train = np.random.randint(0, vocab_size, size=(100, max_length))
+y_train = np.random.randint(0, num_classes, size=(100,))  # Target labels as integers
+
+# One-hot encode the target labels (required for categorical crossentropy)
+y_train = to_categorical(y_train, num_classes=num_classes)
+
+# Train the model
+history = model.fit(x_train, y_train, epochs=10, batch_size=32)
+
+# Predict on training data
+y_pred = model.predict(x_train)
+
+# Convert predictions to class labels (integer format)
+y_pred_classes = np.argmax(y_pred, axis=1)
+
+# Convert one-hot encoded y_train back to class labels
+y_true_classes = np.argmax(y_train, axis=1)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_true_classes, y_pred_classes)
+print(f"Accuracy: {accuracy:.4f}")
+model.summary()
